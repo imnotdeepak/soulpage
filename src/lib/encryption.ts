@@ -143,24 +143,6 @@ export async function deriveKEKFromRecoveryKey(
   return derivedKey;
 }
 
-// ============================================================================
-// Legacy: Old key derivation (for backward compatibility)
-// ============================================================================
-
-/**
- * @deprecated Use deriveKEKFromPassphrase instead
- * Derives an encryption key from a passphrase using PBKDF2
- * @param passphrase - User's journal passphrase
- * @param salt - Salt for key derivation (can be recovery key or user ID)
- * @returns CryptoKey for AES-GCM encryption
- */
-export async function deriveKeyFromPassphrase(
-  passphrase: string,
-  salt: string
-): Promise<CryptoKey> {
-  return deriveKEKFromPassphrase(passphrase, salt);
-}
-
 /**
  * Generates a recovery key (random string)
  * This can be used to recover the journal if passphrase is lost
@@ -215,7 +197,7 @@ export async function decryptDEK(
   // Import decrypted bytes as CryptoKey
   return crypto.subtle.importKey(
     "raw",
-    dekBytes,
+    dekBytes as BufferSource,
     {
       name: "AES-GCM",
       length: 256,
@@ -223,22 +205,6 @@ export async function decryptDEK(
     false, // Not extractable
     ["encrypt", "decrypt"]
   );
-}
-
-// ============================================================================
-// Legacy: Old recovery key derivation (for backward compatibility)
-// ============================================================================
-
-/**
- * @deprecated Use deriveKEKFromRecoveryKey instead
- * Derives encryption key from recovery key
- * Recovery key acts as the salt for key derivation
- */
-export async function deriveKeyFromRecoveryKey(
-  recoveryKey: string,
-  newPassphrase: string
-): Promise<CryptoKey> {
-  return deriveKeyFromPassphrase(newPassphrase, recoveryKey);
 }
 
 // ============================================================================
@@ -295,7 +261,7 @@ export async function decompressText(compressed: Uint8Array): Promise<string> {
   const reader = stream.readable.getReader();
 
   // Write compressed data to decompression stream
-  writer.write(compressed);
+  writer.write(compressed as BufferSource);
   writer.close();
 
   // Read decompressed chunks
@@ -343,10 +309,10 @@ export async function encryptData(
   const encrypted = await crypto.subtle.encrypt(
     {
       name: "AES-GCM",
-      iv: iv,
+      iv: iv as BufferSource,
     },
     key,
-    data
+    data as BufferSource
   );
 
   // Convert to base64 for storage
@@ -374,10 +340,10 @@ export async function decryptData(
   const decrypted = await crypto.subtle.decrypt(
     {
       name: "AES-GCM",
-      iv: ivBuffer,
+      iv: ivBuffer as BufferSource,
     },
     key,
-    encryptedBuffer
+    encryptedBuffer as BufferSource
   );
 
   return new Uint8Array(decrypted);
@@ -432,8 +398,8 @@ export async function decryptAndDecompress(
 /**
  * Converts ArrayBuffer to base64 string
  */
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
+function arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
   let binary = "";
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
@@ -442,9 +408,9 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 }
 
 /**
- * Converts base64 string to ArrayBuffer
+ * Converts base64 string to Uint8Array
  */
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
+function base64ToArrayBuffer(base64: string): Uint8Array {
   // Add padding if needed
   let padded = base64.replace(/-/g, "+").replace(/_/g, "/");
   while (padded.length % 4) {
@@ -456,108 +422,7 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  return bytes.buffer;
-}
-
-// ============================================================================
-// Password-Based Encryption (for storing passphrase/recovery key)
-// ============================================================================
-
-/**
- * Derives an encryption key from the user's login password
- * Used to encrypt/decrypt the passphrase and recovery key
- * @param password - User's login password (plaintext)
- * @param userId - User ID to use as salt
- * @returns CryptoKey for AES-GCM encryption
- */
-export async function deriveKeyFromPassword(
-  password: string,
-  userId: string
-): Promise<CryptoKey> {
-  // Convert password and userId to ArrayBuffer
-  const passwordBuffer = new TextEncoder().encode(password);
-  const saltBuffer = new TextEncoder().encode(userId);
-
-  // Import password as a key for PBKDF2
-  const baseKey = await crypto.subtle.importKey(
-    "raw",
-    passwordBuffer,
-    "PBKDF2",
-    false,
-    ["deriveBits", "deriveKey"]
-  );
-
-  // Derive key using PBKDF2 with high iteration count
-  const derivedKey = await crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: saltBuffer,
-      iterations: 100000, // High iteration count for security
-      hash: "SHA-256",
-    },
-    baseKey,
-    {
-      name: "AES-GCM",
-      length: 256, // 256-bit key
-    },
-    false, // Not extractable
-    ["encrypt", "decrypt"]
-  );
-
-  return derivedKey;
-}
-
-/**
- * Encrypts a string (passphrase or recovery key) using the user's login password
- * @param plaintext - The plaintext to encrypt (passphrase or recovery key)
- * @param password - User's login password (plaintext)
- * @param userId - User ID to use as salt
- * @returns Encrypted data with IV (as JSON string for storage)
- */
-export async function encryptWithPassword(
-  plaintext: string,
-  password: string,
-  userId: string
-): Promise<string> {
-  // Derive key from password
-  const key = await deriveKeyFromPassword(password, userId);
-
-  // Convert plaintext to bytes
-  const plaintextBuffer = new TextEncoder().encode(plaintext);
-
-  // Encrypt
-  const result = await encryptData(plaintextBuffer, key);
-
-  // Return as JSON string for easy storage
-  return JSON.stringify({
-    encrypted: result.encrypted,
-    iv: result.iv,
-  });
-}
-
-/**
- * Decrypts a string (passphrase or recovery key) using the user's login password
- * @param encryptedJson - JSON string containing encrypted data and IV
- * @param password - User's login password (plaintext)
- * @param userId - User ID to use as salt
- * @returns Decrypted plaintext string
- */
-export async function decryptWithPassword(
-  encryptedJson: string,
-  password: string,
-  userId: string
-): Promise<string> {
-  // Parse JSON
-  const { encrypted, iv } = JSON.parse(encryptedJson);
-
-  // Derive key from password
-  const key = await deriveKeyFromPassword(password, userId);
-
-  // Decrypt
-  const decryptedBuffer = await decryptData(encrypted, iv, key);
-
-  // Convert back to string
-  return new TextDecoder().decode(decryptedBuffer);
+  return bytes;
 }
 
 // ============================================================================

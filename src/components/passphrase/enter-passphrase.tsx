@@ -12,16 +12,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  initializeSession,
   initializeSessionWithDEK,
   startAutoLockMonitoring,
 } from "@/lib/session-key";
-import {
-  deriveKeyFromPassphrase,
-  deriveKEKFromPassphrase,
-  decryptDEK,
-  decryptAndDecompress,
-} from "@/lib/encryption";
+import { deriveKEKFromPassphrase, decryptDEK } from "@/lib/encryption";
 import { Eye, EyeOff, Lock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -61,7 +55,6 @@ export function EnterPassphrase({
         const dekData = await dekResponse.json();
         if (dekData.success && dekData.hasDEK) {
           // User has DEK - use DEK model
-          console.log("[enter-passphrase] Using DEK model");
 
           // Derive KEK from passphrase
           const kek = await deriveKEKFromPassphrase(
@@ -86,119 +79,11 @@ export function EnterPassphrase({
         }
       }
 
-      // Fallback: Legacy method (for users who haven't migrated to DEK model)
-      console.log("[enter-passphrase] Using legacy method");
-
-      // Try to get recovery key from various sources
-      // Priority: prop > manual input > sessionStorage
-      let salt = recoveryKey;
-      if (!salt) {
-        salt = manualRecoveryKey.trim() || null;
-      }
-      if (!salt && typeof window !== "undefined") {
-        salt = sessionStorage.getItem("recovery_key") || null;
-      }
-
-      // If we don't have a recovery key, we can't validate properly
-      // But we'll try to decrypt to see if it works
-      if (!salt) {
-        console.warn("No recovery key found - validation may fail");
-      }
-
-      // Fetch an entry to test decryption
-      const entriesResponse = await fetch("/api/journal/entries?limit=1");
-      if (!entriesResponse.ok) {
-        throw new Error("Failed to fetch entries for validation");
-      }
-
-      const entriesResult = await entriesResponse.json();
-      if (!entriesResult.success || !entriesResult.entries?.length) {
-        // No entries yet - can't validate, but allow through for first-time setup
-        // Use recovery key if available, otherwise userId
-        salt = salt || userId;
-        const key = await deriveKeyFromPassphrase(passphrase, salt);
-        await initializeSession(userId, passphrase, salt);
-        startAutoLockMonitoring();
-        toast.success("Journal unlocked!");
-        onSuccess();
-        return;
-      }
-
-      // We have entries - validate passphrase by trying to decrypt
-      const testEntryResponse = await fetch(
-        `/api/journal/entries/${entriesResult.entries[0].id}`
+      // No DEK found - user needs to create a passphrase
+      throw new Error(
+        "No encryption key found. Please use the recovery flow if you've lost your passphrase."
       );
-      if (!testEntryResponse.ok) {
-        throw new Error("Failed to fetch entry for validation");
-      }
-
-      const testEntryResult = await testEntryResponse.json();
-      if (!testEntryResult.success || !testEntryResult.entry) {
-        throw new Error("Entry not found for validation");
-      }
-
-      // Try to decrypt with different possible salts
-      // We need to find which salt was used during encryption
-      let key: CryptoKey | null = null;
-      let validSalt: string | null = null;
-
-      // Try with recovery key as salt first (if we have it)
-      if (salt) {
-        try {
-          key = await deriveKeyFromPassphrase(passphrase, salt);
-          await decryptAndDecompress(
-            testEntryResult.entry.encryptedContent,
-            testEntryResult.entry.iv,
-            key
-          );
-          // Decryption succeeded - this is the correct salt
-          validSalt = salt;
-        } catch (error: any) {
-          console.log("Decryption with recovery key failed, trying userId...");
-          key = null;
-        }
-      }
-
-      // If decryption failed or no salt, try with userId as salt
-      if (!validSalt) {
-        try {
-          key = await deriveKeyFromPassphrase(passphrase, userId);
-          await decryptAndDecompress(
-            testEntryResult.entry.encryptedContent,
-            testEntryResult.entry.iv,
-            key
-          );
-          // Decryption succeeded with userId as salt
-          validSalt = userId;
-        } catch (error: any) {
-          // Both attempts failed
-          console.error("Decryption failed with both salts:", error);
-          if (!salt) {
-            // No recovery key available - user needs to use recovery flow
-            throw new Error(
-              "Recovery key required. Your journal entries are encrypted with a recovery key. Please click 'Use recovery key' below and enter your saved recovery key along with your passphrase."
-            );
-          } else {
-            // Had recovery key but decryption still failed - wrong passphrase
-            throw new Error("Incorrect passphrase. Please try again.");
-          }
-        }
-      }
-
-      // Save recovery key to sessionStorage only (for current session)
-      // We don't persist to localStorage for security
-      if (validSalt && validSalt !== userId && typeof window !== "undefined") {
-        sessionStorage.setItem("recovery_key", validSalt);
-      }
-
-      // Initialize session with the correct salt (legacy method)
-      await initializeSession(userId, passphrase, validSalt);
-      startAutoLockMonitoring();
-
-      toast.success("Journal unlocked!");
-      onSuccess();
     } catch (error: any) {
-      console.error("Error unlocking journal:", error);
       if (error.message?.includes("Incorrect passphrase")) {
         toast.error("Incorrect passphrase. Please try again.");
       } else if (

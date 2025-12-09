@@ -73,7 +73,6 @@ export async function GET() {
       hasDEK,
     });
   } catch (error: any) {
-    console.error("Error retrieving DEK:", error);
     return NextResponse.json(
       {
         error: "Failed to retrieve DEK",

@@ -30,14 +30,6 @@ export async function POST(request: NextRequest) {
       recoverySalt,
     } = body;
 
-    console.log("[store-dek] Received data:", {
-      hasEncryptedDekPassphrase: !!encryptedDekPassphrase,
-      hasEncryptedDekRecovery: !!encryptedDekRecovery,
-      hasPassphraseSalt: !!passphraseSalt,
-      hasRecoverySalt: !!recoverySalt,
-      userId: session.user.id,
-    });
-
     if (
       !encryptedDekPassphrase ||
       !ivDekPassphrase ||
@@ -46,14 +38,6 @@ export async function POST(request: NextRequest) {
       !ivDekRecovery ||
       !recoverySalt
     ) {
-      console.error("[store-dek] Missing required fields:", {
-        encryptedDekPassphrase: !!encryptedDekPassphrase,
-        ivDekPassphrase: !!ivDekPassphrase,
-        passphraseSalt: !!passphraseSalt,
-        encryptedDekRecovery: !!encryptedDekRecovery,
-        ivDekRecovery: !!ivDekRecovery,
-        recoverySalt: !!recoverySalt,
-      });
       return NextResponse.json(
         { error: "Missing required DEK fields" },
         { status: 400 }
@@ -94,19 +78,11 @@ export async function POST(request: NextRequest) {
       .where(eq(user.id, session.user.id))
       .returning();
 
-    console.log("[store-dek] Update result:", {
-      updated: result.length > 0,
-      userId: result[0]?.id,
-      hasEncryptedDekPassphrase: !!result[0]?.encryptedDekPassphrase,
-      hasEncryptedDekRecovery: !!result[0]?.encryptedDekRecovery,
-    });
-
     return NextResponse.json({
       success: true,
       message: "DEK stored successfully",
     });
   } catch (error: any) {
-    console.error("Error storing DEK:", error);
     return NextResponse.json(
       {
         error: "Failed to store DEK",

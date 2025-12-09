@@ -84,7 +84,6 @@ export function CreatePassphrase({
 
     try {
       // DEK Model: Generate Data Encryption Key
-      console.log("[create-passphrase] Generating DEK...");
       const dek = await generateDEK();
 
       // Generate salts for KEK derivation
@@ -92,7 +91,6 @@ export function CreatePassphrase({
       const recoverySalt = generateSalt();
 
       // Derive Key Encryption Keys (KEKs)
-      console.log("[create-passphrase] Deriving KEKs...");
       const kekPassphrase = await deriveKEKFromPassphrase(
         passphrase,
         passphraseSalt
@@ -103,7 +101,6 @@ export function CreatePassphrase({
       );
 
       // Encrypt DEK with both KEKs
-      console.log("[create-passphrase] Encrypting DEK with KEKs...");
       const encryptedDekPassphrase = await encryptDEK(dek, kekPassphrase);
       const encryptedDekRecovery = await encryptDEK(dek, kekRecovery);
 
@@ -124,10 +121,8 @@ export function CreatePassphrase({
       });
 
       const dekResponseData = await dekResponse.json();
-      console.log("[create-passphrase] Store DEK response:", dekResponseData);
 
       if (!dekResponse.ok) {
-        console.error("Failed to store DEK:", dekResponseData);
         toast.error(
           `Failed to store DEK: ${dekResponseData.error || "Unknown error"}`
         );
@@ -140,9 +135,10 @@ export function CreatePassphrase({
 
       toast.success("Journal passphrase created successfully!");
       onComplete(recoveryKey);
-    } catch (error) {
-      console.error("Error creating passphrase:", error);
-      toast.error("Failed to create passphrase. Please try again.");
+    } catch (error: any) {
+      toast.error(
+        error.message || "Failed to create passphrase. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }

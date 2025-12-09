@@ -74,32 +74,16 @@ export function PassphraseGate({ children }: PassphraseGateProps) {
               setMode("create");
               return;
             }
-          } else {
-            console.error("API returned unsuccessful result:", result);
           }
-        } else {
-          const errorText = await response.text();
-          console.error(
-            "Failed to check passphrase status:",
-            response.status,
-            errorText
-          );
         }
       } catch (fetchError) {
-        console.error("Error checking passphrase status:", fetchError);
+        // API call failed - default to enter mode
       }
 
       // Fallback: if API call fails, default to "enter" mode
-      // If user is logging in, they likely have a passphrase already
-      // If they don't, they can use the recovery flow
-      console.warn(
-        "Could not verify passphrase status from API, defaulting to enter mode"
-      );
       setMode("enter");
     } catch (error) {
-      console.error("Error checking passphrase status:", error);
       // Default to "enter" mode if there's an error
-      // User can use recovery flow if they haven't set up passphrase
       setMode("enter");
     }
   };
@@ -137,7 +121,7 @@ export function PassphraseGate({ children }: PassphraseGateProps) {
   }
 
   // If we don't have a userId, show create mode (shouldn't happen if middleware works)
-  if (!userId && mode !== "checking") {
+  if (!userId) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <CreatePassphrase userId="" onComplete={handlePassphraseCreated} />

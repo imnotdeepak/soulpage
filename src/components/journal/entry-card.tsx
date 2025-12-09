@@ -21,15 +21,9 @@ interface EntryCardProps {
   };
   onEdit?: (entryId: string) => void;
   onDelete?: (entryId: string) => void;
-  onViewContent?: (content: string) => void;
 }
 
-export function EntryCard({
-  entry,
-  onEdit,
-  onDelete,
-  onViewContent,
-}: EntryCardProps) {
+export function EntryCard({ entry, onEdit, onDelete }: EntryCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [content, setContent] = useState<string | null>(null);
@@ -66,7 +60,6 @@ export function EntryCard({
         setContent(decrypted);
       } catch (error) {
         // Silently fail - will show word count as fallback
-        console.error("Error loading entry preview:", error);
       } finally {
         setIsLoading(false);
       }
@@ -159,7 +152,6 @@ export function EntryCard({
         setContent(decrypted);
         setIsModalOpen(true);
       } catch (error: any) {
-        console.error("Error loading entry content:", error);
         toast.error(error.message || "Failed to load entry content");
       } finally {
         setIsLoading(false);

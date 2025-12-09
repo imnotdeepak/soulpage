@@ -87,7 +87,6 @@ export function EntryEditor({
       setMood(result.entry.mood || "");
       setTags(result.entry.tags || []);
     } catch (error: any) {
-      console.error("Error loading entry:", error);
       toast.error(error.message || "Failed to load entry");
     } finally {
       setIsLoading(false);
@@ -184,7 +183,6 @@ export function EntryEditor({
         onSave(result.entry?.id || entryId);
       }
     } catch (error: any) {
-      console.error("Error saving entry:", error);
       toast.error(error.message || "Failed to save entry. Please try again.");
     } finally {
       setIsSaving(false);

@@ -41,7 +41,6 @@ export function Timeline({ onEditEntry }: TimelineProps) {
         throw new Error(result.error || "Failed to fetch entries");
       }
     } catch (error: any) {
-      console.error("Error fetching entries:", error);
       toast.error(error.message || "Failed to load entries");
     } finally {
       setIsLoading(false);
@@ -80,7 +79,6 @@ export function Timeline({ onEditEntry }: TimelineProps) {
       // Remove from local state
       setEntries(entries.filter((e) => e.id !== entryId));
     } catch (error: any) {
-      console.error("Error deleting entry:", error);
       toast.error(error.message || "Failed to delete entry");
     }
   };

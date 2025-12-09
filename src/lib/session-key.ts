@@ -8,11 +8,6 @@
  * - Auto-lock timeout expires
  */
 
-import {
-  deriveKeyFromPassphrase,
-  deriveKeyFromRecoveryKey,
-} from "./encryption";
-
 // ============================================================================
 // Types
 // ============================================================================
@@ -38,48 +33,6 @@ let sessionState: SessionKeyState = {
 // ============================================================================
 // Key Management
 // ============================================================================
-
-/**
- * Initializes the session with an encryption key derived from passphrase
- * @param userId - Current user ID
- * @param passphrase - User's journal passphrase
- * @param salt - Salt for key derivation (typically user ID or recovery key)
- * @returns The derived CryptoKey
- */
-export async function initializeSession(
-  userId: string,
-  passphrase: string,
-  salt: string
-): Promise<CryptoKey> {
-  const key = await deriveKeyFromPassphrase(passphrase, salt);
-  sessionState = {
-    key,
-    userId,
-    lastActivity: Date.now(),
-    autoLockTimeout: sessionState.autoLockTimeout,
-  };
-  return key;
-}
-
-/**
- * Initializes session using recovery key
- * Used when user forgets passphrase
- * @deprecated Use initializeSessionWithDEK instead for DEK model
- */
-export async function initializeSessionWithRecoveryKey(
-  userId: string,
-  recoveryKey: string,
-  newPassphrase: string
-): Promise<CryptoKey> {
-  const key = await deriveKeyFromRecoveryKey(recoveryKey, newPassphrase);
-  sessionState = {
-    key,
-    userId,
-    lastActivity: Date.now(),
-    autoLockTimeout: sessionState.autoLockTimeout,
-  };
-  return key;
-}
 
 /**
  * Initializes session with DEK (Data Encryption Key)
