@@ -20,7 +20,6 @@ import {
   encryptDEK,
 } from "@/lib/encryption";
 import {
-  initializeSession,
   initializeSessionWithDEK,
   startAutoLockMonitoring,
 } from "@/lib/session-key";

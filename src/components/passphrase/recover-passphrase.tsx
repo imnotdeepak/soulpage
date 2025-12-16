@@ -257,7 +257,7 @@ export function RecoverPassphrase({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setStep("old-passphrase")}
+                onClick={() => setStep("recovery")}
                 className="flex-1"
               >
                 Back
