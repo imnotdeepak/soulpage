@@ -11,6 +11,14 @@ import VerifyEmail from "@/components/emails/verify-email";
 const resend = new Resend(process.env.RESEND_API_KEY as string);
 
 export const auth = betterAuth({
+  // Prevent 403s in production by explicitly trusting your app's origin(s).
+  // Better Auth validates the request Origin header for CSRF protection.
+  trustedOrigins: [
+    "https://www.soulpage.space",
+    "https://soulpage.space",
+    "http://localhost:3000",
+    "http://localhost:3001",
+  ],
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
       const emailHtml = await render(
