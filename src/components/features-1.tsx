@@ -58,7 +58,9 @@ export default function Features() {
                 <Sparkles className="size-6" aria-hidden />
               </CardDecorator>
 
-              <h3 className="mt-6 font-medium">Optional AI Summaries</h3>
+              <h3 className="mt-6 font-medium">
+                Optional AI Summaries Coming Soon
+              </h3>
             </CardHeader>
 
             <CardContent>

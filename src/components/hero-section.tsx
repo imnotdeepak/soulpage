@@ -131,9 +131,9 @@ export default function HeroSection() {
                 </h1>
                 <p className="mx-auto mt-8 hidden max-w-2xl text-wrap text-lg sm:block">
                   Soft Pages is a private, encrypted journal where your thoughts
-                  are truly yours. Write freely with optional AI summaries,
-                  browse your timeline, and search your memories—all with
-                  zero-knowledge security and a calming, reflective experience.
+                  are truly yours. Write freely, browse your timeline, and
+                  search your memories—all with zero-knowledge security and a
+                  calming, reflective experience.
                 </p>
                 <p className="mx-auto mt-6 max-w-2xl text-wrap sm:hidden">
                   A private, encrypted journal where your thoughts are truly
