@@ -1,6 +1,22 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+
+async function getRequestBaseURL(): Promise<string> {
+  const fromEnv = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "");
+  // If someone accidentally sets NEXT_PUBLIC_BASE_URL to localhost in production,
+  // ignore it and derive from request headers instead.
+  if (fromEnv && !/^https?:\/\/localhost(?::\d+)?$/i.test(fromEnv))
+    return fromEnv;
+
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  if (host) return `${proto}://${host}`;
+
+  return "http://localhost:3000";
+}
 
 export const signIn = async (email: string, password: string) => {
   try {
@@ -37,7 +53,7 @@ export const forgotPassword = async (email: string) => {
   try {
     // Call better-auth's forget-password endpoint directly
     // This will trigger the sendResetPassword callback configured in auth.ts
-    const baseURL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseURL = await getRequestBaseURL();
     const response = await fetch(`${baseURL}/api/auth/forget-password`, {
       method: "POST",
       headers: {
